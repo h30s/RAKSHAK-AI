@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CCTV Monitor</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>CCTV Monitor</span>
+    </div>
+    <div class="status">
+      <span id="conn" class="conn">Connecting…</span>
+      <span id="clock" class="clock"></span>
+    </div>
+  </header>
+
+  <main>
+    <section id="grid-view" class="grid" aria-label="Camera feeds"></section>
+
+    <section id="detail-view" class="detail" hidden>
+      <div class="detail-main">
+        <div class="detail-head">
+          <button id="back" class="back" type="button">← All cameras</button>
+          <h1 id="detail-title"></h1>
+        </div>
+        <div class="feed feed-large">
+          <canvas id="detail-canvas"></canvas>
+          <span class="feed-time" id="detail-time"></span>
+        </div>
+      </div>
+      <aside class="panel" aria-label="Detected objects">
+        <h2>Detected objects <span id="obj-count" class="count"></span></h2>
+        <ul id="objects" class="objects"></ul>
+        <p id="objects-empty" class="empty">No objects detected.</p>
+      </aside>
+    </section>
+  </main>
+
+  <template id="tile-template">
+    <button class="tile" type="button">
+      <div class="feed">
+        <canvas></canvas>
+        <span class="feed-time"></span>
+        <span class="alert-badge" hidden></span>
+      </div>
+      <div class="tile-foot">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="tile-name"></span>
+        <span class="tile-summary"></span>
+      </div>
+    </button>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
