@@ -1,14 +1,19 @@
 """FastAPI server: serves the dashboard, streams feeds over one WebSocket, exposes detected objects."""
 import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager
 
+import cv2
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
 from .pipeline import Camera, DetectionLoop
+from .tracking import api as tracking_api
+from .tracking.feeds import SyncedCamera
+from .tracking.tracker import JourneyTracker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("cctv")
@@ -21,9 +26,19 @@ async def lifespan(app: FastAPI):
     missing = [f for _, _, f in config.CAMERAS if not (config.VIDEO_DIR / f).exists()]
     if missing:
         raise RuntimeError(f"Missing videos {missing} in {config.VIDEO_DIR} — run scripts/fetch_assets.py first")
+    site_of = {cam: site for site, cams in config.TRACKING_SITES.items() for cam in cams}
+    clocks = {site: time.monotonic() for site in config.TRACKING_SITES}
+    files = {cam_id: config.VIDEO_DIR / file for cam_id, _, file in config.CAMERAS}
+    loop_frames = {site: min(frame_count(files[c]) for c in cams) for site, cams in config.TRACKING_SITES.items()}
     for i, (cam_id, name, file) in enumerate(config.CAMERAS):
-        cameras.append(Camera(i, cam_id, name, config.VIDEO_DIR / file))
-    loop = DetectionLoop(cameras)  # loads the models before any feed starts
+        if cam_id in site_of:  # recorded simultaneously with the rest of its site: play in lockstep
+            site = site_of[cam_id]
+            cameras.append(SyncedCamera(i, cam_id, name, files[cam_id], clocks[site], loop_frames[site]))
+        else:
+            cameras.append(Camera(i, cam_id, name, config.VIDEO_DIR / file))
+    tracker = JourneyTracker({c.id: c.name for c in cameras})
+    tracking_api.tracker = tracker
+    loop = DetectionLoop(cameras, on_results=tracker.update)  # loads the models before any feed starts
     for cam in cameras:
         cam.start()
     loop.start()
@@ -31,8 +46,26 @@ async def lifespan(app: FastAPI):
     yield
 
 
+def frame_count(path):
+    cap = cv2.VideoCapture(str(path))
+    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    return n
+
+
 app = FastAPI(title="CCTV Object Detection", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=config.STATIC_DIR), name="static")
+
+
+@app.middleware("http")
+async def revalidate_static(request, call_next):
+    """Make browsers re-check the page, scripts and styles on every load (cheap 304s), so an
+    updated dashboard is picked up without a hard refresh."""
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+app.include_router(tracking_api.router)
 
 
 @app.get("/")
@@ -42,7 +75,9 @@ def index():
 
 @app.get("/api/cameras")
 def list_cameras():
-    return [{"index": c.index, "id": c.id, "name": c.name} for c in cameras]
+    site_of = {cam: site for site, cams in config.TRACKING_SITES.items() for cam in cams}
+    return [{"index": c.index, "id": c.id, "name": c.name, "group": site_of.get(c.id, config.DEFAULT_GROUP),
+             "multi_camera": c.id in site_of} for c in cameras]
 
 
 @app.get("/api/cameras/{cam_id}/objects")

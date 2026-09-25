@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CCTV Monitor</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
   <header class="topbar">
@@ -12,6 +12,10 @@
       <span class="brand-mark" aria-hidden="true"></span>
       <span>CCTV Monitor</span>
     </div>
+    <nav class="tabs" aria-label="Views">
+      <a id="tab-cameras" class="tab" href="#">Cameras</a>
+      <a id="tab-people" class="tab" href="#people">People <span id="people-count" class="tab-count"></span></a>
+    </nav>
     <div class="status">
       <span id="conn" class="conn">Connecting…</span>
       <span id="clock" class="clock"></span>
@@ -19,13 +23,14 @@
   </header>
 
   <main>
-    <section id="grid-view" class="grid" aria-label="Camera feeds"></section>
+    <section id="grid-view" aria-label="Camera feeds"></section>
 
     <section id="detail-view" class="detail" hidden>
       <div class="detail-main">
         <div class="detail-head">
           <button id="back" class="back" type="button">← All cameras</button>
           <h1 id="detail-title"></h1>
+          <span class="hint">Click a person to follow their journey</span>
         </div>
         <div class="feed feed-large">
           <canvas id="detail-canvas"></canvas>
@@ -37,6 +42,58 @@
         <ul id="objects" class="objects"></ul>
         <p id="objects-empty" class="empty">No objects detected.</p>
       </aside>
+    </section>
+
+    <section id="people-view" class="people" hidden>
+      <aside class="panel people-list" aria-label="People">
+        <h2>People <span id="plist-count" class="count"></span></h2>
+        <input id="person-search" class="search" type="search" placeholder="Search ID or location (e.g. P-004, Lobby)" autocomplete="off">
+        <div class="seg" role="group" aria-label="Filter">
+          <button type="button" class="seg-btn active" data-status="active">Active</button>
+          <button type="button" class="seg-btn" data-status="moved" title="People seen in two or more locations">Journeys</button>
+          <button type="button" class="seg-btn" data-status="all">All</button>
+        </div>
+        <ul id="person-list" class="plist"></ul>
+        <p id="person-list-empty" class="empty" hidden>No people match.</p>
+      </aside>
+
+      <div id="person-empty" class="person-empty">
+        <p>Select a person to see where they are and where they have been.</p>
+      </div>
+
+      <div id="person-detail" class="person" hidden>
+        <div class="person-head">
+          <img id="p-photo" class="p-photo" alt="">
+          <div class="p-title">
+            <div class="p-id-row"><h1 id="p-id"></h1><span id="p-status" class="pill"></span></div>
+            <div id="p-meta" class="p-meta"></div>
+            <div id="p-route" class="route" aria-label="Route"></div>
+          </div>
+        </div>
+
+        <div class="person-body">
+          <section class="card">
+            <div class="card-head">
+              <h2>Current location</h2>
+              <span id="p-loc-since" class="muted"></span>
+            </div>
+            <div class="p-loc"><span id="p-loc" class="p-loc-name"></span><span id="p-cam" class="muted"></span></div>
+            <div class="feed feed-person">
+              <canvas id="person-canvas"></canvas>
+              <span class="feed-time" id="person-time"></span>
+              <span id="person-feed-note" class="feed-note" hidden>Not in view — showing last known camera</span>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>Journey</h2>
+              <span id="p-steps" class="muted"></span>
+            </div>
+            <ol id="journey" class="journey"></ol>
+          </section>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -55,6 +112,6 @@
     </button>
   </template>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=2"></script>
 </body>
 </html>

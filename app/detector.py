@@ -25,11 +25,26 @@ def coverage(inner, outer):
     return w * h / area if area > 0 else 0.0
 
 
+def onnx_path(pt_path, imgsz):
+    return pt_path.with_name(f"{pt_path.stem}_{imgsz}.onnx")
+
+
+def load_yolo(pt_path, imgsz):
+    """Prefer the ONNX export of a model (same detections, ~1.5x faster on CPU with ONNX
+    Runtime); fall back to the PyTorch weights. scripts/fetch_assets.py creates the exports."""
+    onnx = onnx_path(pt_path, imgsz)
+    if onnx.exists():
+        return YOLO(str(onnx), task="detect")
+    log.info("No ONNX export at %s — using the slower PyTorch model", onnx)
+    return YOLO(str(pt_path))
+
+
 class Detector:
     def __init__(self):
         log.info("Loading models ...")
-        self.general = YOLO(str(config.MODEL_DIR / config.GENERAL_MODEL))
-        self.threat = YOLO(str(config.THREAT_MODEL)) if config.THREAT_MODEL.exists() else None
+        self.general = load_yolo(config.MODEL_DIR / config.GENERAL_MODEL, config.GENERAL_IMGSZ)
+        self.threat = (load_yolo(config.THREAT_MODEL, config.THREAT_IMGSZ)
+                       if config.THREAT_MODEL.exists() else None)
         if self.threat is None:
             log.warning("Weapon model not found at %s — only COCO classes will be detected. "
                         "Run scripts/fetch_assets.py.", config.THREAT_MODEL)

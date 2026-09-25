@@ -5,3 +5,6 @@ opencv-python-headless>=4.9
 fastapi>=0.110
 uvicorn[standard]>=0.29
 huggingface_hub>=0.23
+onnxruntime>=1.18
+onnx>=1.16         # only needed once, to export the ReID model in scripts/fetch_assets.py
+onnxslim>=0.1       # used by the ONNX export of the YOLO models
