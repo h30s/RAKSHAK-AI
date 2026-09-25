@@ -15,6 +15,9 @@ from .modes.feeds import ModeCamera
 from .pipeline import Camera, DetectionLoop
 from .sources import api as sources_api
 from .sources.feeds import LiveCamera
+from .threats import api as threats_api
+from .threats.monitor import ThreatMonitor
+from .threats.store import IncidentStore
 from .tracking import api as tracking_api
 from .tracking.feeds import SyncedCamera
 from .tracking.tracker import JourneyTracker
@@ -62,6 +65,9 @@ async def lifespan(app: FastAPI):
     for cam in feeds:
         cam.start()
     loop.start()
+    # Threat monitoring (Overview tab): camera health and weapon incidents on dashboard cameras.
+    threats_api.monitor = ThreatMonitor(cameras, loop, IncidentStore())
+    threats_api.monitor.start()
     sources_api.start_phone_server()
     log.info("Started %d cameras", len(cameras))
     yield
@@ -83,12 +89,13 @@ async def revalidate_static(request, call_next):
     """Make browsers re-check the page, scripts and styles on every load (cheap 304s), so an
     updated dashboard is picked up without a hard refresh."""
     response = await call_next(request)
-    if request.url.path in ("/", "/modes") or request.url.path.startswith("/static/"):
+    if request.url.path in ("/", "/modes", "/reports") or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
 app.include_router(tracking_api.router)
 app.include_router(modes_api.router)
 app.include_router(sources_api.router)
+app.include_router(threats_api.router)
 
 
 @app.get("/")

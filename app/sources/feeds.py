@@ -27,6 +27,7 @@ class LiveCamera(Camera):
         self.publisher = None      # the connected device's session (any object), or None
         self.device = None         # its label, e.g. "Integrated Webcam" or "Phone (back camera)"
         self.connected_at = None
+        self.disconnected_at = None  # when the last device left (None: never connected yet)
         self.incoming = None       # newest decoded frame from the device
         self.received_at = 0.0
         self.session_start = 0     # frame index at which the current connection started
@@ -55,6 +56,7 @@ class LiveCamera(Camera):
         with self._pub_lock:
             if session is self.publisher:
                 self.publisher, self.device, self.connected_at = None, None, None
+                self.disconnected_at = time.time()
                 log.info("%s disconnected", self.name)
 
     @property

@@ -13,7 +13,8 @@ Video files ──► Camera threads ──► Detection thread (YOLOv8n COCO + 
                      └── frames + boxes + person IDs
                                │  WebSocket / REST
                                ▼
-      Browser: Cameras tab (grid ─► large view + detected objects)
+      Browser: Overview tab (threat score, camera status, alerts + alarm, actions) ─► /reports
+               Cameras tab (grid ─► large view + detected objects)
                People tab  (list/search ─► live location + journey)
                Camera Sources tab (webcam / USB camera / phone ──► frames sent into the same pipeline)
                /modes      (detection modes: night, thermal, fog, rain & snow)
@@ -32,11 +33,13 @@ python scripts/fetch_assets.py    # downloads the 23 demo clips and 3 models (~1
 uvicorn app.server:app --port 8000
 ```
 
-Open http://localhost:8000.
+Open http://localhost:8000. It opens on the **Overview**; the live camera grid is the **Cameras** tab.
 
 ## What it does
 
-- **Cameras tab**: two groups of feeds. *Main Building* has 8 feeds (Ground Floor, First Floor,
+- **Overview tab** (the start page): threat score, active threats, camera status, alerts with
+  an alarm sound, and actions. See *Threat monitoring* below. **Reports** (`/reports`) has the full history.
+- **Cameras tab** (`/#cameras`): two groups of feeds. *Main Building* has 8 feeds (Ground Floor, First Floor,
   Parking and Entrance, two cameras each). *School Building* has 5 synchronised cameras
   (Plaza, Lobby, Stairwell, Cafeteria, Hallway) that people walk between. Every feed shows
   bounding boxes with class name and confidence. People are green, other objects are amber and
@@ -60,6 +63,64 @@ Open http://localhost:8000.
   live detection on it. See below.
 - **Detection modes** (`/modes`, "View Detection Modes" in the header): a separate page showing
   the same detection pipeline on footage recorded in different conditions. See below.
+
+## Threat monitoring
+
+The **Overview** tab answers five questions at a glance: are the cameras working, is there an
+active threat, where is it, how serious is it, and is someone already handling it.
+
+- **Summary cards**: overall threat score (0–100 with Low / Medium / High), active threats (with
+  in-progress and resolved counts), cameras online and camera issues.
+- **Alert banner**: the most serious threat nobody has taken on yet, with its camera, location,
+  time and level, plus the actions.
+- **Cameras**: every camera with its area, status (🟢 Online, 🟡 Signal problem, 🔴 Offline, with
+  the reason), threat level, latest threat and last activity. They are sorted by risk; click one to watch it.
+- **Recent alerts**, **threat level by camera**, **high-risk areas** and **recent activity**
+  (detections, actions and camera problems).
+- **Header**: system status ("All clear" / "2 active threats" / "1 camera issue"), the bell with the
+  number of open threats, and the alarm sound on/off switch.
+
+**Where threats come from.** `app/threats/monitor.py` reads what the detection pipeline
+already produced: the confirmed weapons in each camera's object log, taken at the frame on screen,
+so an alert never appears before the video shows the weapon. A new weapon opens an **incident**.
+Further sightings of the same kind of weapon on that camera are added to the open incident, so a
+weapon that stays in view raises one alert, not one per frame. The same weapon seen within 2 minutes
+of its incident being resolved is noted on that incident instead of raising a new alarm
+(`RESOLVED_QUIET_S`). Each incident stores a snapshot of the frame with the weapon boxed.
+
+**Alerts.** A new incident shows a notification on every tab. A new *High* one also plays an
+alarm, a tone generated in the browser, so no audio file is needed. Browsers only allow sound after
+the user has clicked on the page once; until then the notification says so and the speaker icon
+turns amber.
+
+**Actions.** Every open threat has **Working on it** (🟡 In progress) and **Mark as resolved**
+(🟢 Resolved); a resolved one can be reopened. The details view (click any alert) shows the type,
+camera, location, time, score, status and snapshot, and a timeline of actions. An optional note can
+be saved with an action or on its own, e.g. "guard sent to the entrance".
+
+**Scores.** An incident's score is its weapon's severity (explosion 100, grenade 95, gun 90,
+knife 80) × (0.75 + 0.25 × detection confidence). A camera's score is its highest open threat; a
+threat in progress counts at 75%. The overall score is the highest camera score + 5 per extra open
+threat. High ≥ 70, Medium ≥ 40, otherwise Low. An area (the part of the camera name before "—")
+is at risk while it has an open threat, and is listed as Low for an hour after an incident.
+
+**Camera health.** 🟡 Signal problem: no new frame for 5 s, a live source that is connected but
+sends no video, or frames arriving but not analysed (detection stalled). 🔴 Offline: no frame for
+15 s, or a live source that disconnected (shown for 10 minutes). Unused live source slots are not
+listed.
+
+**Reports** (`/reports`): every incident with date and time, camera, location, type, score, status,
+the last action taken and when it was resolved (and how long it took). Search, filter by status
+and period, open details, and **Export CSV**. Incidents and snapshots are saved in `data/` and survive
+restarts.
+
+With the demo footage, **Parking — Camera 2** (rifle) and **Entrance — Camera 2** (knife) raise
+threats within a minute of starting. The other recorded feeds never go offline; to see a camera
+problem, connect a phone in Camera Sources and then close its page.
+
+API: `GET /api/threats/overview`, `GET /api/threats?status=&q=&days=`, `GET /api/threats/{id}`,
+`GET /api/threats/{id}/snapshot.jpg`, `POST /api/threats/{id}/status` (`{"status": "in_progress" |
+"resolved" | "active", "note": "..."}`), `POST /api/threats/{id}/note`, `GET /api/threats/export.csv`.
 
 ## Camera sources
 
@@ -249,6 +310,10 @@ app/tracking/      person journey tracking
   osnet.py         OSNet network definition (from torchreid, MIT)
   feeds.py         lockstep playback for cameras of one site
   api.py           /api/persons endpoints
+app/threats/       threat monitoring (Overview tab, /reports)
+  store.py         incidents, actions, scores; saved in data/threats.json
+  monitor.py       camera health, weapons -> incidents, the Overview data
+  api.py           /api/threats endpoints and the /reports page
 app/sources/       camera sources (webcam, USB camera, phone)
   feeds.py         LiveCamera: a dashboard camera fed by a device's frames
   api.py           /api/sources, the upload stream, the HTTPS listener for phones

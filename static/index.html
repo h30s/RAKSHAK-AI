@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CCTV Monitor</title>
-  <link rel="stylesheet" href="/static/style.css?v=5">
+  <link rel="stylesheet" href="/static/style.css?v=6">
+  <link rel="stylesheet" href="/static/threats.css?v=3">
 </head>
 <body>
   <header class="topbar">
@@ -13,18 +14,83 @@
       <span>CCTV Monitor</span>
     </div>
     <nav class="tabs" aria-label="Views">
-      <a id="tab-cameras" class="tab" href="#">Cameras</a>
+      <a id="tab-overview" class="tab" href="#overview">Overview</a>
+      <a id="tab-cameras" class="tab" href="#cameras">Cameras</a>
       <a id="tab-people" class="tab" href="#people">People <span id="people-count" class="tab-count"></span></a>
       <a id="tab-sources" class="tab" href="#sources"><span class="tab-long">Camera </span>Sources <span id="sources-count" class="tab-count"></span></a>
+      <a class="tab" href="/reports">Reports</a>
     </nav>
     <div class="status">
       <a class="modes-link" href="/modes"><span class="modes-link-verb">View </span>Detection Modes</a>
+      <span id="sys-status" class="sys-status" title="System status">…</span>
       <span id="conn" class="conn">Connecting…</span>
       <span id="clock" class="clock"></span>
+      <button id="sound-btn" class="icon-btn" type="button" title="Alarm sound"></button>
+      <a id="bell" class="icon-btn bell" href="#overview" title="Active threats">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span id="bell-count" class="bell-count" hidden></span>
+      </a>
+      <span class="avatar" title="Operator (this dashboard has no user accounts)">OP</span>
     </div>
   </header>
 
+  <div id="toasts" class="toasts" aria-live="assertive"></div>
+
   <main>
+    <section id="overview-view" class="overview" hidden>
+      <div id="ov-banner" class="ov-banner" hidden></div>
+
+      <div class="ov-cards">
+        <div class="ov-card" id="card-score">
+          <span class="ov-label">Overall threat score</span>
+          <div class="ov-big"><span id="ov-score">–</span><small>/100</small><span id="ov-level" class="lv-pill lv-none">–</span></div>
+          <div class="bar"><span id="ov-score-bar"></span></div>
+        </div>
+        <a class="ov-card" id="card-active" href="#ov-alerts">
+          <span class="ov-label">Active threats</span>
+          <div class="ov-big"><span id="ov-active">–</span></div>
+          <span id="ov-active-sub" class="ov-sub"></span>
+        </a>
+        <div class="ov-card" id="card-online">
+          <span class="ov-label">Cameras online</span>
+          <div class="ov-big"><span id="ov-online">–</span><small id="ov-total"></small></div>
+          <span id="ov-online-sub" class="ov-sub"></span>
+        </div>
+        <div class="ov-card" id="card-issues">
+          <span class="ov-label">Camera issues</span>
+          <div class="ov-big"><span id="ov-issues">–</span></div>
+          <span id="ov-issues-sub" class="ov-sub"></span>
+        </div>
+      </div>
+
+      <div class="ov-main">
+        <section class="card ov-cameras">
+          <div class="card-head"><h2>Cameras</h2><span class="muted">highest risk first · click to watch</span></div>
+          <div id="ov-camera-list" class="cam-list"></div>
+        </section>
+        <section class="card ov-alerts" id="ov-alerts">
+          <div class="card-head"><h2>Recent alerts</h2><a class="muted" href="/reports">All reports →</a></div>
+          <ol id="ov-alert-list" class="alert-list"></ol>
+          <p id="ov-alerts-empty" class="empty" hidden>No threats detected yet.</p>
+        </section>
+      </div>
+
+      <div class="ov-lower">
+        <section class="card">
+          <div class="card-head"><h2>Threat level by camera</h2></div>
+          <div id="ov-bars" class="score-bars"></div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>High-risk areas</h2><span id="ov-areas-count" class="muted"></span></div>
+          <ul id="ov-areas" class="area-list"></ul>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>Recent activity</h2></div>
+          <ol id="ov-activity" class="activity"></ol>
+        </section>
+      </div>
+    </section>
+
     <section id="grid-view" aria-label="Camera feeds"></section>
 
     <section id="detail-view" class="detail" hidden>
@@ -208,8 +274,10 @@
     </button>
   </template>
 
+  <script src="/static/threat-ui.js?v=1"></script>
+  <script src="/static/threats.js?v=1"></script>
   <script src="/static/capture.js?v=2"></script>
   <script src="/static/sources.js?v=2"></script>
-  <script src="/static/app.js?v=3"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>

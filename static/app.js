@@ -14,7 +14,7 @@ const personCanvas = $("person-canvas");
 const connEl = $("conn");
 
 let cameras = [];        // [{index, id, name, group, tile, canvas, time, badge, summary, frame}]
-let view = "grid";       // grid | camera | people | sources
+let view = null;         // overview | grid | camera | people | sources
 let selected = null;     // camera shown in the camera detail view
 let objectsTimer = null;
 let personId = null;     // person shown in the people view
@@ -399,18 +399,22 @@ function route() {
   const params = new URLSearchParams(location.hash.slice(1));
   const cam = cameras.find((c) => c.id === params.get("cam"));
   const person = params.get("person");
-  const next = cam ? "camera" : person !== null || location.hash === "#people" ? "people"
-    : location.hash === "#sources" ? "sources" : "grid";
+  const h = location.hash;
+  const next = cam ? "camera" : person !== null || h === "#people" ? "people"
+    : h === "#sources" ? "sources" : h === "#cameras" ? "grid" : "overview";
 
   if (view === "camera" && (next !== "camera" || cam !== selected)) closeCamera();
   if (view === "people" && next !== "people") closePeople();
   if (view === "sources" && next !== "sources") closeSources();
+  if (view === "overview" && next !== "overview") closeOverview();
   const opening = view !== next;
   view = next;
   gridView.hidden = view !== "grid";
   if (view === "camera" && cam !== selected) openCamera(cam);
   if (view === "people") openPeople(person ? person.toUpperCase() : null);
   if (view === "sources" && opening) openSources();
+  if (view === "overview" && opening) openOverview();
+  $("tab-overview").classList.toggle("active", view === "overview");
   $("tab-cameras").classList.toggle("active", view === "grid" || view === "camera");
   $("tab-people").classList.toggle("active", view === "people");
   $("tab-sources").classList.toggle("active", view === "sources");
@@ -461,12 +465,13 @@ async function init() {
     section.querySelector(".group-head span").textContent = live ? "webcam, USB camera and phone · connect them in Camera Sources"
       : `${n} cameras` + (linked ? " · people are followed from camera to camera" : "");
   }
-  $("back").addEventListener("click", () => { location.hash = ""; });
+  $("back").addEventListener("click", () => { location.hash = "cameras"; });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && view === "camera") location.hash = "";
+    if (e.key === "Escape" && view === "camera") location.hash = "cameras";
   });
   window.addEventListener("hashchange", route);
   initSources();
+  initThreats();
   setInterval(updateLiveTiles, 1000);
   route();
   connect();

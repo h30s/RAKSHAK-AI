@@ -158,3 +158,21 @@ LIVE_STALE_S = 3.0            # a source that has sent no frame for this long co
 PHONE_PORT = int(os.getenv("PHONE_PORT", 8443))
 PHONE_HOST = os.getenv("PHONE_HOST")  # this computer's LAN address for the QR code; detected when unset
 CERT_DIR = ROOT / "certs"
+
+# --- Threat monitoring (Overview tab, /reports) ---------------------------------------------
+# A confirmed weapon on a dashboard camera becomes an incident that the operator can mark
+# "Working on it" or "Resolved". Incidents are kept in DATA_DIR (history for the Reports page).
+DATA_DIR = ROOT / "data"
+# Threat score of an incident: SEVERITY x (0.75 + 0.25 x detection confidence), 0-100.
+THREAT_SEVERITY = {"explosion": 100, "grenade": 95, "gun": 90, "knife": 80}
+THREAT_LEVELS = [(70, "High"), (40, "Medium"), (0, "Low")]  # score >= threshold -> level
+IN_PROGRESS_WEIGHT = 0.75     # a threat someone is handling counts this much in camera/area scores
+# The same weapon on the same camera this soon after its incident was resolved is logged on that
+# incident ("seen again") instead of raising a new alarm.
+RESOLVED_QUIET_S = 120
+AREA_WINDOW_S = 3600          # an area stays listed as at risk for this long after an incident
+# Camera health. No new frame for SIGNAL_PROBLEM_S = signal problem; OFFLINE_S = offline.
+SIGNAL_PROBLEM_S = 5
+OFFLINE_S = 15
+DETECTION_STALL_S = 30        # frames arriving but not analysed for this long (or 4 cycles) = problem
+LIVE_LOST_KEEP_S = 600        # a disconnected live source is listed as offline this long
