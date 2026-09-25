@@ -5,7 +5,7 @@
 
 const COLORS = { threat: "#ff4d4f", person: "#3fb68b", other: "#f5b83d" };
 const VEHICLES = new Set(["Car", "Truck", "Bus", "Motorcycle", "Bicycle", "Train", "Boat"]);
-const ICONS = {  // 24x24 stroke icons
+const MODE_ICONS = {  // 24x24 stroke icons
   normal: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   night: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
   thermal: '<path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 11v6"/>',
@@ -41,7 +41,7 @@ function draw() {
   const W = canvas.width, H = canvas.height;
   ctx.drawImage(frame.image, 0, 0, W, H);
   const font = Math.round(14 * dpr), pad = Math.round(4 * dpr);
-  ctx.font = `600 ${font}px "Segoe UI", system-ui, sans-serif`;
+  ctx.font = `600 ${font}px Inter, "Segoe UI", system-ui, sans-serif`;
   ctx.textBaseline = "top";
   ctx.lineWidth = Math.max(1.5, 2.5 * dpr);
   for (const [x1, y1, x2, y2, label, conf, threat] of [...frame.dets].sort((a, b) => a[6] - b[6])) {
@@ -162,7 +162,7 @@ function renderCards() {
       <div class="mode-thumb">
         <img alt="" loading="lazy">
         <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">${ICONS[m.id] || ""}</svg></span>
+          stroke-linecap="round" stroke-linejoin="round">${MODE_ICONS[m.id] || ""}</svg></span>
       </div>
       <div class="mode-text"><div class="mode-name"></div><div class="mode-tag"></div></div>`;
     a.querySelector("img").src = posterUrl(m.clips[0]);

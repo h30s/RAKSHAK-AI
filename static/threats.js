@@ -40,7 +40,7 @@ function showToast(a, soundBlocked) {
   el.className = `toast ${tuLevelClass(a.level)}`;
   el.setAttribute("role", "alert");
   el.innerHTML = `
-    <div class="toast-title">🚨 Threat detected</div>
+    <div class="toast-title">Threat detected</div>
     <div class="toast-text"><b>${tuEsc(a.type)}</b> detected on ${tuEsc(a.camera)}</div>
     <div class="toast-meta">Location: ${tuEsc(a.location)} · ${tuTime(a.detected_at)} · ${tuLevelPill(a.level, a.score)}</div>
     ${soundBlocked ? `<div class="toast-note">Alarm sound is blocked until you click on the page.</div>` : ""}
@@ -53,26 +53,14 @@ function showToast(a, soundBlocked) {
 }
 
 function renderHeaderStatus(data) {
-  const s = data.summary;
-  const el = ovEl("sys-status");
-  let text = "All clear", cls = "ok";
-  if (s.active) { text = `${s.active} active threat${s.active > 1 ? "s" : ""}`; cls = "bad"; }
-  else if (s.in_progress) { text = `${s.in_progress} being handled`; cls = "warn"; }
-  else if (s.camera_issues) { text = `${s.camera_issues} camera issue${s.camera_issues > 1 ? "s" : ""}`; cls = "warn"; }
-  el.textContent = `● ${text}`;
-  el.className = `sys-status ${cls}`;
-  const open = s.active + s.in_progress;
-  const count = ovEl("bell-count");
-  count.hidden = !open;
-  count.textContent = open;
-  count.classList.toggle("bad", s.active > 0);
-  ovEl("bell").title = open ? `${open} open threat${open > 1 ? "s" : ""}` : "No open threats";
+  setHeaderStatus(data.summary);  // nav.js
 }
 
 // ---------- Overview rendering ----------
 
 function renderOverview(d) {
   const s = d.summary, now = d.now;
+  ovEl("ov-updated").textContent = `Updated ${new Date(now * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 
   // Banner: the most serious threat nobody has taken on yet.
   const top = d.open.find((t) => t.status === "active");
@@ -82,11 +70,15 @@ function renderOverview(d) {
     const more = d.open.filter((t) => t.status === "active").length - 1;
     banner.className = `ov-banner ${tuLevelClass(top.level)}`;
     banner.innerHTML = `
-      <div class="ob-icon" aria-hidden="true">🚨</div>
+      <div class="ob-icon" aria-hidden="true">${icon("alert")}</div>
       <div class="ob-text">
-        <div class="ob-title">Threat detected: ${tuEsc(top.type)} on ${tuEsc(top.camera)}</div>
-        <div class="ob-meta">Location: <b>${tuEsc(top.location)}</b> · Time: <b>${tuTime(top.detected_at)}</b> ·
-          Threat level: ${tuLevelPill(top.level, top.score)}${more > 0 ? ` · <b>+${more} more active</b>` : ""}</div>
+        <div class="ob-kicker">Threat detected${more > 0 ? ` · ${more + 1} active` : ""}</div>
+        <div class="ob-title">${tuEsc(top.type)} on ${tuEsc(top.camera)}</div>
+        <div class="ob-meta">
+          <span>${icon("pin")}<b>${tuEsc(top.location)}</b></span>
+          <span>${icon("clock")}<b>${tuTime(top.detected_at)}</b></span>
+          <span>Threat level ${tuLevelPill(top.level, top.score)}</span>
+        </div>
       </div>
       <div class="ob-actions">${tuActions(top)}<button type="button" class="btn" data-details="${top.id}">Details</button></div>`;
   }
@@ -131,7 +123,7 @@ function renderOverview(d) {
   ovEl("ov-alerts-empty").hidden = d.alerts.length > 0;
   ovEl("ov-alert-list").innerHTML = d.alerts.map((a) => `
     <li class="alert-item ${tuLevelClass(a.level)} is-${a.status}" data-details="${a.id}">
-      <div class="ai-top"><b>${a.status === "resolved" ? "" : "🚨 "}${tuEsc(a.type)} detected</b>${tuStatusChip(a.status)}</div>
+      <div class="ai-top"><b>${icon(a.status === "resolved" ? "check" : "alert")}${tuEsc(a.type)} detected</b>${tuStatusChip(a.status)}</div>
       <div class="ai-meta">${tuEsc(a.camera)} · ${tuEsc(a.location)}</div>
       <div class="ai-meta">${tuTime(a.detected_at)} (${tuAgo(a.detected_at, now)}) · ${tuLevelPill(a.level, a.score)}</div>
       ${a.status !== "resolved" ? `<div class="ai-actions">${tuActions(a, true)}</div>` : ""}

@@ -44,7 +44,7 @@ function draw(canvas, frame, highlight = null) {
   const font = Math.round((big ? 14 : 11) * dpr);
   const pad = Math.round(4 * dpr);
   const lw = Math.max(1.5, (big ? 2.5 : 1.75) * dpr);
-  ctx.font = `600 ${font}px "Segoe UI", system-ui, sans-serif`;
+  ctx.font = `600 ${font}px Inter, "Segoe UI", system-ui, sans-serif`;
   ctx.textBaseline = "top";
 
   // Threats last so they sit on top; a highlighted person above everything else.
@@ -430,7 +430,8 @@ async function init() {
     if (!groups.has(c.group)) {
       const section = document.createElement("div");
       section.className = "group";
-      section.innerHTML = `<div class="group-head"><h2></h2><span></span></div><div class="grid"></div>`;
+      const groupIcon = c.group === "Live Sources" ? "sources" : c.multi_camera ? "route" : "building";
+      section.innerHTML = `<div class="group-head"><div class="group-icon">${icon(groupIcon)}</div><h2></h2><span></span></div><div class="grid"></div>`;
       section.querySelector("h2").textContent = c.group;
       gridView.append(section);
       groups.set(c.group, section);
@@ -478,9 +479,5 @@ async function init() {
   pollPeopleCount();
   setInterval(pollPeopleCount, 3000);
 }
-
-setInterval(() => {
-  $("clock").textContent = new Date().toLocaleString([], { hour12: false });
-}, 1000);
 
 init();

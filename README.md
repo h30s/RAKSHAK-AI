@@ -321,6 +321,9 @@ app/sources/       camera sources (webcam, USB camera, phone)
 app/modes/         detection modes page
   feeds.py         clips that only play while watched
   api.py           /api/modes endpoints and the /ws/modes/{id} stream
-static/            dashboard and modes page (plain HTML/CSS/JS, canvas rendering)
+static/            the web app (plain HTML/CSS/JS, canvas rendering, no build step)
+  style.css        design system (colours, type, spacing, components) + dashboard views
+  nav.js           shared navigation bar, icon set, header status, used by every page
+  threats.css/js   Overview tab and alerts; reports.*, modes.*, phone.* for the other pages
 scripts/fetch_assets.py   downloads footage and model weights
 ```
