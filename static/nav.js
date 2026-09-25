@@ -35,6 +35,7 @@ const ICONS = {
   phone: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
   eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
   user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  message: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.8A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
 };
 
 function icon(name, cls = "") {
@@ -43,24 +44,25 @@ function icon(name, cls = "") {
 }
 
 const NAV_ITEMS = [
-  { id: "tab-overview", href: "/#overview", icon: "overview", label: "Overview" },
-  { id: "tab-cameras", href: "/#cameras", icon: "cameras", label: "Cameras" },
-  { id: "tab-people", href: "/#people", icon: "people", label: "People", count: "people-count" },
-  { id: "tab-sources", href: "/#sources", icon: "sources", label: "Sources", count: "sources-count" },
+  { id: "tab-overview", href: "/app#overview", icon: "overview", label: "Overview" },
+  { id: "tab-cameras", href: "/app#cameras", icon: "cameras", label: "Cameras" },
+  { id: "tab-people", href: "/app#people", icon: "people", label: "People", count: "people-count" },
+  { id: "tab-sources", href: "/app#sources", icon: "sources", label: "Sources", count: "sources-count" },
   { id: "tab-modes", href: "/modes", icon: "modes", label: "Detection Modes", page: "modes" },
   { id: "tab-reports", href: "/reports", icon: "reports", label: "Reports", page: "reports" },
 ];
 
 (function renderNav() {
+  try { sessionStorage.setItem("rk-visited-app", "1"); } catch { /* storage unavailable */ }  // lets the feedback form pre-tick "I tried the prototype"
   const header = document.getElementById("app-nav");
   if (!header) return;
   const page = header.dataset.page || "dashboard";
   header.className = "nav";
   header.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-brand" href="/#overview" aria-label="CCTV Monitor home">
+      <a class="nav-brand" href="/" aria-label="Rakshak AI home page">
         <span class="nav-logo">${icon("logo")}</span>
-        <span class="nav-title">CCTV Monitor<small>AI threat detection</small></span>
+        <span class="nav-title">Rakshak AI<small>Operations console</small></span>
       </a>
       <nav class="nav-links" id="nav-links" aria-label="Main">
         ${NAV_ITEMS.map((n) => `<a id="${n.id}" class="nav-link${n.page === page ? " active" : ""}" href="${n.href}"
@@ -71,7 +73,8 @@ const NAV_ITEMS = [
         <span id="conn" class="conn" title="Video stream"></span>
         <span id="clock" class="clock"></span>
         ${page === "dashboard" ? '<button id="sound-btn" class="icon-btn" type="button" title="Alarm sound"></button>' : ""}
-        <a id="bell" class="icon-btn bell" href="/#overview" title="Open threats">${icon("bell")}<span id="bell-count" class="bell-count" hidden></span></a>
+        <a class="btn nav-feedback" href="/#feedback" title="Tell us what you think of the prototype">${icon("message")}<span>Feedback</span></a>
+        <a id="bell" class="icon-btn bell" href="/app#overview" title="Open threats">${icon("bell")}<span id="bell-count" class="bell-count" hidden></span></a>
         <span class="avatar" title="Operator (this dashboard has no user accounts)">${icon("user")}</span>
         <button class="icon-btn nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">${icon("menu", "i-open")}${icon("close", "i-close")}</button>
       </div>

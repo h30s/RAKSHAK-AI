@@ -138,6 +138,9 @@ main > section:not([hidden]) { animation: view-in .35s var(--ease); }
   background: linear-gradient(135deg, #2a3a57, #1b2536); border: 1px solid var(--border-2);
 }
 .avatar .ic { width: 18px; height: 18px; }
+.nav-feedback { height: 38px; border-radius: 10px; color: var(--text-2); }
+.nav-feedback:hover { color: var(--text); }
+@media (max-width: 1600px) { .nav-feedback { width: 38px; padding: 0; } .nav-feedback span { display: none; } }
 .nav-toggle { display: none; }
 .nav-toggle .i-close { display: none; }
 .nav-open .nav-toggle .i-open { display: none; }

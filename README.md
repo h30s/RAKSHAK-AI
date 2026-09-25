@@ -1,6 +1,7 @@
-# CCTV Object Detection — prototype
+# Rakshak AI — CCTV intelligence prototype
 
-A simple CCTV monitoring website: 13 camera feeds, real-time object and weapon detection on
+Rakshak AI is a software layer for existing CCTV. This repository holds its public landing page
+and the working prototype: 13 camera feeds, real-time object and weapon detection on
 every feed, and person journey tracking. Every person gets an ID (P-001, …) and the system
 records where they go from camera to camera.
 
@@ -13,7 +14,9 @@ Video files ──► Camera threads ──► Detection thread (YOLOv8n COCO + 
                      └── frames + boxes + person IDs
                                │  WebSocket / REST
                                ▼
-      Browser: Overview tab (threat score, camera status, alerts + alarm, actions) ─► /reports
+      Browser: /           landing page (problem, approach, status, feedback form)
+               /app        operations console:
+               Overview tab (threat score, camera status, alerts + alarm, actions) ─► /reports
                Cameras tab (grid ─► large view + detected objects)
                People tab  (list/search ─► live location + journey)
                Camera Sources tab (webcam / USB camera / phone ──► frames sent into the same pipeline)
@@ -33,7 +36,18 @@ python scripts/fetch_assets.py    # downloads the 23 demo clips and 3 models (~1
 uvicorn app.server:app --port 8000
 ```
 
-Open http://localhost:8000. It opens on the **Overview**; the live camera grid is the **Cameras** tab.
+Open http://localhost:8000 for the landing page, or http://localhost:8000/app for the operations
+console. The console opens on the **Overview**; the live camera grid is the **Cameras** tab.
+
+## Landing page and feedback
+
+`/` (`static/landing.*`) presents the problem, the approach, what the prototype does today and a
+requirement-by-requirement status, and links into the console. Its screenshots in `static/site/`
+are real captures of the console. Retake them if the UI changes.
+
+Visitors can leave feedback at the end of the page. Entries are appended to
+`data/feedback.jsonl`. Only this machine can read them, at http://localhost:8000/feedback or as
+JSON from `/api/feedback`, because they may contain names and email addresses.
 
 ## What it does
 
@@ -303,7 +317,7 @@ real camera stream.
 app/config.py      cameras, model settings, thresholds (tracking settings at the end)
 app/detector.py    runs both YOLO models on a batch of frames and merges the results
 app/pipeline.py    camera playback threads, detection loop, weapon filter, box interpolation, object log
-app/server.py      FastAPI: page, /api/cameras, /api/cameras/{id}/objects, /ws frame stream
+app/server.py      FastAPI: /api/cameras, /api/cameras/{id}/objects, /ws frame stream
 app/tracking/      person journey tracking
   tracker.py       per-camera tracks, cross-camera re-identification, journeys
   reid.py          OSNet appearance embeddings (ONNX Runtime) + ONNX export
@@ -318,6 +332,7 @@ app/sources/       camera sources (webcam, USB camera, phone)
   feeds.py         LiveCamera: a dashboard camera fed by a device's frames
   api.py           /api/sources, the upload stream, the HTTPS listener for phones
   network.py       LAN address, self-signed certificate, pairing token, adb (phone over USB)
+app/website/       landing page (/), console (/app), visitor feedback (/api/feedback, /feedback)
 app/modes/         detection modes page
   feeds.py         clips that only play while watched
   api.py           /api/modes endpoints and the /ws/modes/{id} stream
@@ -325,5 +340,7 @@ static/            the web app (plain HTML/CSS/JS, canvas rendering, no build st
   style.css        design system (colours, type, spacing, components) + dashboard views
   nav.js           shared navigation bar, icon set, header status, used by every page
   threats.css/js   Overview tab and alerts; reports.*, modes.*, phone.* for the other pages
+  landing.*        public landing page; site/ holds its product screenshots
+  feedback.html    feedback review page (local only)
 scripts/fetch_assets.py   downloads footage and model weights
 ```

@@ -98,7 +98,7 @@ function renderThreatDetails(t) {
   const img = t.snapshot ? `/api/threats/${t.id}/snapshot.jpg` : t.thumbnail;
   const facts = [
     ["Threat type", tuEsc(t.type)],
-    ["Camera", `${tuEsc(t.camera)} <a class="td-link" href="/#cam=${encodeURIComponent(t.camera_id)}">Open live view</a>`],
+    ["Camera", `${tuEsc(t.camera)} <a class="td-link" href="/app#cam=${encodeURIComponent(t.camera_id)}">Open live view</a>`],
     ["Location", tuEsc(t.location)],
     ["Detected", `${tuDateTime(t.detected_at)}`],
     ["Last seen", `${tuDateTime(t.last_seen)}${t.sightings > 1 ? ` · seen ${t.sightings} times` : ""}`],

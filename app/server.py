@@ -21,6 +21,7 @@ from .threats.store import IncidentStore
 from .tracking import api as tracking_api
 from .tracking.feeds import SyncedCamera
 from .tracking.tracker import JourneyTracker
+from .website import api as website_api
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("cctv")
@@ -89,18 +90,14 @@ async def revalidate_static(request, call_next):
     """Make browsers re-check the page, scripts and styles on every load (cheap 304s), so an
     updated dashboard is picked up without a hard refresh."""
     response = await call_next(request)
-    if request.url.path in ("/", "/modes", "/reports") or request.url.path.startswith("/static/"):
+    if request.url.path in ("/", "/app", "/modes", "/reports", "/feedback") or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
 app.include_router(tracking_api.router)
 app.include_router(modes_api.router)
 app.include_router(sources_api.router)
 app.include_router(threats_api.router)
-
-
-@app.get("/")
-def index():
-    return FileResponse(config.STATIC_DIR / "index.html")
+app.include_router(website_api.router)
 
 
 @app.get("/modes")
