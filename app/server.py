@@ -13,6 +13,8 @@ from . import config
 from .modes import api as modes_api
 from .modes.feeds import ModeCamera
 from .pipeline import Camera, DetectionLoop
+from .sources import api as sources_api
+from .sources.feeds import LiveCamera
 from .tracking import api as tracking_api
 from .tracking.feeds import SyncedCamera
 from .tracking.tracker import JourneyTracker
@@ -39,6 +41,10 @@ async def lifespan(app: FastAPI):
             cameras.append(SyncedCamera(i, cam_id, name, files[cam_id], clocks[site], loop_frames[site]))
         else:
             cameras.append(Camera(i, cam_id, name, config.VIDEO_DIR / file))
+    # Live sources (webcam, USB camera, phone): ordinary dashboard cameras fed by a device.
+    for cam_id, name in config.LIVE_SOURCES:
+        sources_api.sources[cam_id] = LiveCamera(len(cameras), cam_id, name)
+        cameras.append(sources_api.sources[cam_id])
     tracker = JourneyTracker({c.id: c.name for c in cameras})
     tracking_api.tracker = tracker
     # Detection-modes clips: same detection loop, but they only play while watched on /modes
@@ -56,6 +62,7 @@ async def lifespan(app: FastAPI):
     for cam in feeds:
         cam.start()
     loop.start()
+    sources_api.start_phone_server()
     log.info("Started %d cameras", len(cameras))
     yield
 
@@ -81,6 +88,7 @@ async def revalidate_static(request, call_next):
     return response
 app.include_router(tracking_api.router)
 app.include_router(modes_api.router)
+app.include_router(sources_api.router)
 
 
 @app.get("/")
@@ -96,8 +104,10 @@ def modes_page():
 @app.get("/api/cameras")
 def list_cameras():
     site_of = {cam: site for site, cams in config.TRACKING_SITES.items() for cam in cams}
+    site_of.update({cam: config.LIVE_GROUP for cam in sources_api.sources})
     return [{"index": c.index, "id": c.id, "name": c.name, "group": site_of.get(c.id, config.DEFAULT_GROUP),
-             "multi_camera": c.id in site_of} for c in cameras]
+             "multi_camera": c.id in config.TRACKING_SITES.get(site_of.get(c.id), ()),
+             "live": c.id in sources_api.sources} for c in cameras]
 
 
 @app.get("/api/cameras/{cam_id}/objects")

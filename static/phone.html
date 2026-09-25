@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1014">
+  <title>Phone Camera · CCTV Monitor</title>
+  <link rel="stylesheet" href="/static/phone.css?v=1">
+</head>
+<body>
+  <header class="bar">
+    <span class="mark" aria-hidden="true"></span>
+    <span>CCTV Monitor</span>
+  </header>
+
+  <main>
+    <h1>Phone camera</h1>
+    <p class="lead">Sends this phone's camera to the monitor, where it runs through live object and weapon detection.</p>
+
+    <div class="preview">
+      <video id="preview" muted playsinline autoplay></video>
+      <span id="badge" class="badge" hidden>● Live</span>
+      <div id="placeholder" class="placeholder">Camera is off</div>
+    </div>
+
+    <p id="status" class="status" role="status">Tap Start camera and allow camera access.</p>
+
+    <div class="actions">
+      <button id="start" class="btn primary" type="button">Start camera</button>
+      <button id="stop" class="btn" type="button" hidden>Stop</button>
+      <button id="flip" class="btn" type="button" hidden>Switch camera</button>
+    </div>
+
+    <p class="note">Keep this page open while streaming. Hold the phone sideways for the widest view.</p>
+  </main>
+
+  <script src="/static/capture.js?v=2"></script>
+  <script src="/static/phone.js?v=2"></script>
+</body>
+</html>

@@ -14,7 +14,7 @@ const personCanvas = $("person-canvas");
 const connEl = $("conn");
 
 let cameras = [];        // [{index, id, name, group, tile, canvas, time, badge, summary, frame}]
-let view = "grid";       // grid | camera | people
+let view = "grid";       // grid | camera | people | sources
 let selected = null;     // camera shown in the camera detail view
 let objectsTimer = null;
 let personId = null;     // person shown in the people view
@@ -40,7 +40,7 @@ function draw(canvas, frame, highlight = null) {
   const W = canvas.width, H = canvas.height;
   ctx.drawImage(frame.image, 0, 0, W, H);
 
-  const big = canvas === detailCanvas || canvas === personCanvas;
+  const big = canvas === detailCanvas || canvas === personCanvas || canvas.id === "src-canvas";
   const font = Math.round((big ? 14 : 11) * dpr);
   const pad = Math.round(4 * dpr);
   const lw = Math.max(1.5, (big ? 2.5 : 1.75) * dpr);
@@ -107,10 +107,31 @@ function updateTile(cam) {
   cam.summary.textContent = `${people} ${people === 1 ? "person" : "people"} · ${dets.length} objects`;
 }
 
+const isLiveConnected = (cam) => cam.rx && performance.now() - cam.rx < 3000;
+
+// Live-source tiles show "Not connected" (and drop a stale picture and alert) without a device.
+function updateLiveTiles() {
+  for (const cam of cameras) {
+    if (!cam.live) continue;
+    const on = isLiveConnected(cam);
+    if (cam.offline.hidden === on) continue;
+    cam.offline.hidden = on;
+    if (!on) {
+      cam.frame = null;
+      cam.canvas.getContext("2d").clearRect(0, 0, cam.canvas.width, cam.canvas.height);
+      cam.time.textContent = "";
+      cam.summary.textContent = "";
+      cam.badge.hidden = true;
+      cam.tile.classList.remove("threat");
+    }
+  }
+}
+
 // ---------- Stream ----------
 
 function wantsImage(cam) {
-  return view === "grid" || (view === "camera" && cam === selected) || (view === "people" && cam === personCam);
+  return view === "grid" || (view === "camera" && cam === selected) || (view === "people" && cam === personCam)
+    || (view === "sources" && cam.id === src.selected);
 }
 
 function connect() {
@@ -128,6 +149,7 @@ function connect() {
     if (!cam) return;
     const metaLen = dv.getUint16(1);
     const meta = JSON.parse(new TextDecoder().decode(new Uint8Array(ev.data, 3, metaLen)));
+    cam.rx = performance.now();  // live sources: shows whether a device is connected
     if (!wantsImage(cam)) { cam.frame = { ...meta, image: cam.frame?.image }; return; }
 
     const image = await createImageBitmap(new Blob([new Uint8Array(ev.data, 3 + metaLen)], { type: "image/jpeg" }));
@@ -139,6 +161,8 @@ function connect() {
     } else if (view === "people" && cam === personCam) {
       draw(personCanvas, cam.frame, personId);
       $("person-time").textContent = fmtTime(meta.time);
+    } else if (view === "sources") {
+      sourcesFrame(cam);
     } else if (view === "grid") {
       draw(cam.canvas, cam.frame);
       updateTile(cam);
@@ -148,10 +172,10 @@ function connect() {
 
 // ---------- Camera detail view ----------
 
-function renderObjects(items) {
-  objectsEmpty.hidden = items.length > 0;
-  $("obj-count").textContent = items.length ? `(${items.length})` : "";
-  objectsList.innerHTML = "";
+function renderObjects(items, list = objectsList, empty = objectsEmpty, count = $("obj-count")) {
+  empty.hidden = items.length > 0;
+  count.textContent = items.length ? `(${items.length})` : "";
+  list.innerHTML = "";
   for (const o of items) {
     const li = document.createElement("li");
     li.className = "obj" + (o.threat ? " threat" : "");
@@ -168,7 +192,7 @@ function renderObjects(items) {
     body.querySelector(".obj-conf b").textContent = `${o.confidence}%`;
     body.querySelector(".obj-details").textContent = o.details;
     li.append(img, body);
-    objectsList.append(li);
+    list.append(li);
   }
 }
 
@@ -375,16 +399,21 @@ function route() {
   const params = new URLSearchParams(location.hash.slice(1));
   const cam = cameras.find((c) => c.id === params.get("cam"));
   const person = params.get("person");
-  const next = cam ? "camera" : person !== null || location.hash === "#people" ? "people" : "grid";
+  const next = cam ? "camera" : person !== null || location.hash === "#people" ? "people"
+    : location.hash === "#sources" ? "sources" : "grid";
 
   if (view === "camera" && (next !== "camera" || cam !== selected)) closeCamera();
   if (view === "people" && next !== "people") closePeople();
+  if (view === "sources" && next !== "sources") closeSources();
+  const opening = view !== next;
   view = next;
   gridView.hidden = view !== "grid";
   if (view === "camera" && cam !== selected) openCamera(cam);
   if (view === "people") openPeople(person ? person.toUpperCase() : null);
-  $("tab-cameras").classList.toggle("active", view !== "people");
+  if (view === "sources" && opening) openSources();
+  $("tab-cameras").classList.toggle("active", view === "grid" || view === "camera");
   $("tab-people").classList.toggle("active", view === "people");
+  $("tab-sources").classList.toggle("active", view === "sources");
 }
 
 // ---------- Setup ----------
@@ -406,27 +435,39 @@ async function init() {
     const tile = tpl.content.firstElementChild.cloneNode(true);
     tile.querySelector(".tile-name").textContent = c.name;
     tile.setAttribute("aria-label", `Open ${c.name}`);
-    tile.addEventListener("click", () => { location.hash = `cam=${c.id}`; });
+    const cam = { ...c };
+    tile.addEventListener("click", () => {
+      if (c.live && !isLiveConnected(cam)) { src.selected = c.id; location.hash = "sources"; }
+      else location.hash = `cam=${c.id}`;
+    });
+    if (c.live) {  // live source: placeholder while no device is connected
+      tile.querySelector(".feed").insertAdjacentHTML("beforeend",
+        '<div class="feed-offline"><b>Not connected</b><span>Connect it in Camera Sources</span></div>');
+    }
     section.querySelector(".grid").append(tile);
-    return {
-      ...c, tile, frame: null,
+    return Object.assign(cam, {
+      tile, frame: null,
       canvas: tile.querySelector("canvas"),
       time: tile.querySelector(".feed-time"),
       badge: tile.querySelector(".alert-badge"),
       summary: tile.querySelector(".tile-summary"),
-    };
+      offline: tile.querySelector(".feed-offline"),
+    });
   });
   for (const [name, section] of groups) {
     const n = section.querySelectorAll(".tile").length;
     const linked = list.some((c) => c.group === name && c.multi_camera);
-    section.querySelector(".group-head span").textContent =
-      `${n} cameras` + (linked ? " · people are followed from camera to camera" : "");
+    const live = list.some((c) => c.group === name && c.live);
+    section.querySelector(".group-head span").textContent = live ? "webcam, USB camera and phone · connect them in Camera Sources"
+      : `${n} cameras` + (linked ? " · people are followed from camera to camera" : "");
   }
   $("back").addEventListener("click", () => { location.hash = ""; });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && view === "camera") location.hash = "";
   });
   window.addEventListener("hashchange", route);
+  initSources();
+  setInterval(updateLiveTiles, 1000);
   route();
   connect();
   pollPeopleCount();

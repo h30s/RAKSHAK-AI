@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CCTV Monitor</title>
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
   <header class="topbar">
@@ -15,6 +15,7 @@
     <nav class="tabs" aria-label="Views">
       <a id="tab-cameras" class="tab" href="#">Cameras</a>
       <a id="tab-people" class="tab" href="#people">People <span id="people-count" class="tab-count"></span></a>
+      <a id="tab-sources" class="tab" href="#sources"><span class="tab-long">Camera </span>Sources <span id="sources-count" class="tab-count"></span></a>
     </nav>
     <div class="status">
       <a class="modes-link" href="/modes"><span class="modes-link-verb">View </span>Detection Modes</a>
@@ -96,6 +97,100 @@
         </div>
       </div>
     </section>
+
+    <section id="sources-view" class="sources" hidden>
+      <div class="src-list">
+        <div class="src-intro">
+          <h1>Camera Sources</h1>
+          <p>Connect a webcam or a phone. Every source goes through the same detection and weapon alerts as the CCTV feeds, and appears under <b>Live Sources</b> on the Cameras tab.</p>
+        </div>
+
+        <article class="src-card" data-source="live-webcam" data-kind="builtin">
+          <button type="button" class="src-head">
+            <span class="src-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+            <span class="src-title"><span class="src-name">Laptop Webcam</span><span class="src-state">Not connected</span></span>
+          </button>
+          <div class="src-body">
+            <label class="src-field">Camera <select class="src-device"></select></label>
+            <div class="src-actions">
+              <button type="button" class="btn primary src-start">Connect</button>
+              <button type="button" class="btn src-stop" hidden>Disconnect</button>
+            </div>
+            <p class="src-msg" hidden></p>
+          </div>
+        </article>
+
+        <article class="src-card" data-source="live-usb" data-kind="external">
+          <button type="button" class="src-head">
+            <span class="src-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="6"/><circle cx="12" cy="10" r="2.5"/><path d="M8 20h8M12 16v4"/></svg></span>
+            <span class="src-title"><span class="src-name">USB / External Camera</span><span class="src-state">Not connected</span></span>
+          </button>
+          <div class="src-body">
+            <label class="src-field">Camera <select class="src-device"></select></label>
+            <div class="src-actions">
+              <button type="button" class="btn primary src-start">Connect</button>
+              <button type="button" class="btn src-stop" hidden>Disconnect</button>
+            </div>
+            <p class="src-msg" hidden></p>
+            <p class="src-hint">USB webcams show up in this list once plugged in. So does an Android phone (Android 14+) connected by cable with its USB mode set to <b>Webcam</b>.</p>
+          </div>
+        </article>
+
+        <article class="src-card" data-source="live-mobile" data-kind="phone">
+          <button type="button" class="src-head">
+            <span class="src-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg></span>
+            <span class="src-title"><span class="src-name">Mobile Camera</span><span class="src-state">Not connected</span></span>
+          </button>
+          <div class="src-body">
+            <div class="src-actions">
+              <button type="button" class="btn primary" id="qr-toggle">Connect Mobile via QR</button>
+              <button type="button" class="btn" id="usb-phone">Via USB cable</button>
+              <button type="button" class="btn src-stop" hidden>Disconnect</button>
+            </div>
+            <div id="qr-box" class="qr-box" hidden>
+              <img id="qr-img" alt="QR code to open the phone camera page">
+              <ol>
+                <li>Connect the phone to the same Wi-Fi as this computer.</li>
+                <li>Scan the code with the phone's camera.</li>
+                <li>The page uses a local certificate, so the browser warns once: tap <b>Advanced</b> → <b>Proceed</b> (Safari: <b>Show details</b> → <b>visit this website</b>).</li>
+                <li>Tap <b>Start camera</b> and allow camera access.</li>
+              </ol>
+              <code id="qr-url" class="qr-url"></code>
+            </div>
+            <p id="usb-msg" class="src-msg" hidden></p>
+            <div id="usb-help" class="usb-help" hidden>
+              <b>Connecting an Android phone by cable</b>
+              <ol>
+                <li>On the phone: <b>Settings → About phone</b>, tap <b>Build number</b> (Xiaomi/Redmi: <b>OS version</b>) 7 times to unlock Developer options.</li>
+                <li><b>Settings → Developer options</b> (Xiaomi: <b>Additional settings → Developer options</b>): turn on <b>USB debugging</b>.</li>
+                <li>Connect with a <b>data</b> cable (some cables only charge) and set the USB mode to <b>File transfer</b>.</li>
+                <li>Tap <b>Allow</b> on the "Allow USB debugging?" prompt, then press <b>Via USB cable</b> again.</li>
+              </ol>
+              <span>The camera page then opens on the phone: tap <b>Start camera</b>. It works best in Chrome. iPhones can't do this on Windows; use the QR code.</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="src-stage">
+        <div class="detail-head">
+          <h1 id="src-title"></h1>
+          <span id="src-lag" class="hint"></span>
+        </div>
+        <div id="src-feed" class="feed feed-large">
+          <canvas id="src-canvas"></canvas>
+          <span class="feed-time" id="src-time"></span>
+          <span class="alert-badge" id="src-alert" hidden></span>
+          <div id="src-empty" class="src-empty"></div>
+        </div>
+      </div>
+
+      <aside class="panel src-panel" aria-label="Detected objects">
+        <h2>Detected objects <span id="src-obj-count" class="count"></span></h2>
+        <ul id="src-objects" class="objects"></ul>
+        <p id="src-objects-empty" class="empty">No objects detected.</p>
+      </aside>
+    </section>
   </main>
 
   <template id="tile-template">
@@ -113,6 +208,8 @@
     </button>
   </template>
 
-  <script src="/static/app.js?v=2"></script>
+  <script src="/static/capture.js?v=2"></script>
+  <script src="/static/sources.js?v=2"></script>
+  <script src="/static/app.js?v=3"></script>
 </body>
 </html>

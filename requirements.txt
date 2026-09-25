@@ -8,3 +8,5 @@ huggingface_hub>=0.23
 onnxruntime>=1.18
 onnx>=1.16         # only needed once, to export the ReID model in scripts/fetch_assets.py
 onnxslim>=0.1       # used by the ONNX export of the YOLO models
+segno>=1.6          # QR code for connecting a phone (Camera Sources)
+cryptography>=42    # self-signed HTTPS certificate for the phone camera page

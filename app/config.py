@@ -141,3 +141,20 @@ DETECTION_MODES = [
      "clips": [("mode-rain-street", "Rainy night street", "mode_rain_street.mp4"),
                ("mode-snow-street", "Snowfall", "mode_snow_street.mp4")]},
 ]
+
+# --- Camera sources ------------------------------------------------------------------------
+# Live inputs (webcam, USB camera, phone) connected from the dashboard's Camera Sources tab.
+# Each is an ordinary dashboard camera fed by frames a browser sends in, so it goes through the
+# same detection loop, weapon filter and alerts as the recorded feeds. (id, name)
+LIVE_SOURCES = [
+    ("live-webcam", "Laptop Webcam"),
+    ("live-usb", "USB Camera"),
+    ("live-mobile", "Mobile Camera"),
+]
+LIVE_GROUP = "Live Sources"
+LIVE_STALE_S = 3.0            # a source that has sent no frame for this long counts as disconnected
+# Phones need HTTPS to use their camera, so a second listener serves just the phone page over
+# HTTPS (self-signed certificate in CERT_DIR) on the local network.
+PHONE_PORT = int(os.getenv("PHONE_PORT", 8443))
+PHONE_HOST = os.getenv("PHONE_HOST")  # this computer's LAN address for the QR code; detected when unset
+CERT_DIR = ROOT / "certs"

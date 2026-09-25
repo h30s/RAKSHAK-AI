@@ -15,6 +15,7 @@ Video files ──► Camera threads ──► Detection thread (YOLOv8n COCO + 
                                ▼
       Browser: Cameras tab (grid ─► large view + detected objects)
                People tab  (list/search ─► live location + journey)
+               Camera Sources tab (webcam / USB camera / phone ──► frames sent into the same pipeline)
                /modes      (detection modes: night, thermal, fog, rain & snow)
 ```
 
@@ -55,8 +56,53 @@ Open http://localhost:8000.
     with the person highlighted in blue and everyone else dimmed;
   - **Journey**: every location in order, with camera, arrival time, time spent there and the
     time between locations.
+- **Camera Sources tab** (`/#sources`): connect a laptop webcam, a USB camera or a phone and run
+  live detection on it. See below.
 - **Detection modes** (`/modes`, "View Detection Modes" in the header): a separate page showing
   the same detection pipeline on footage recorded in different conditions. See below.
+
+## Camera sources
+
+The **Camera Sources** tab connects live cameras:
+
+| Source | How it connects |
+|---|---|
+| Laptop Webcam | pick a camera in the list and press Connect (the browser asks for permission once) |
+| USB / External Camera | USB webcams appear in the same kind of list when plugged in. An Android 14+ phone connected by cable with its USB mode set to **Webcam** appears there too |
+| Mobile Camera via QR | scan the QR code with the phone (same Wi-Fi), accept the certificate warning once, tap **Start camera** |
+| Mobile Camera via USB cable | Android with USB debugging on, plugged in with a data cable: **Via USB cable** runs `adb reverse` and opens the camera page on the phone (needs Android platform-tools). If the phone isn't found, the card shows the steps to enable USB debugging |
+
+**One pipeline.** A source is not processed separately. The browser (or phone) sends JPEG frames
+over a WebSocket (`static/capture.js`) to a `LiveCamera` (`app/sources/feeds.py`), which is an
+ordinary dashboard camera. It plays the newest frame at the feed frame rate, so the same
+`DetectionLoop`, weapon filter, re-check, object log, person IDs and alerts apply. Connected
+sources show up on the Cameras tab under **Live Sources**. A weapon gives the same red tile
+border and "Knife detected" badge as any feed, and weapons are listed first in the panel. The
+Sources tab shows the processed feed of the selected source with the same alert.
+
+**Switching.** Picking another camera in a card's list switches that source to it. A second
+device connecting to a source takes it over (the first one is told it was replaced). Disconnect
+stops a source; nothing needs a restart. Idle sources cost nothing, and each connected source
+adds one feed to the detection batch.
+
+**Phones need HTTPS.** Mobile browsers only allow camera access on secure pages, so the server
+also listens on `https://<this computer's LAN IP>:8443` (`PHONE_PORT`), using a self-signed
+certificate created in `certs/`. That listener only serves the phone page and the upload stream.
+The dashboard stays on localhost. Uploads from the network must carry the pairing token that is
+in the QR code (a new one every server start). Notes:
+- the phone must be on the same network. On first start Windows asks whether Python may accept
+  connections; allow it for private networks, or the phone can't reach the page;
+- if the detected LAN address is wrong (VPNs, several adapters), set `PHONE_HOST`;
+- iPhones can't be used as a USB camera on Windows; use the QR code.
+
+Like every feed, the video is shown a few seconds behind live (the display delay), so the boxes
+line up with the frames they were detected on. The Sources tab shows how far behind it is.
+Frames are sent on a Web Worker timer, so a webcam keeps streaming while the dashboard tab is in
+the background.
+
+API: `GET /api/sources`, `GET /api/sources/qr.svg`, `POST /api/sources/{id}/disconnect`,
+`POST /api/sources/usb-phone`, WebSocket `/ws/sources/{id}/publish` (binary JPEG frames), page
+`/phone`.
 
 ## Detection modes
 
@@ -203,6 +249,10 @@ app/tracking/      person journey tracking
   osnet.py         OSNet network definition (from torchreid, MIT)
   feeds.py         lockstep playback for cameras of one site
   api.py           /api/persons endpoints
+app/sources/       camera sources (webcam, USB camera, phone)
+  feeds.py         LiveCamera: a dashboard camera fed by a device's frames
+  api.py           /api/sources, the upload stream, the HTTPS listener for phones
+  network.py       LAN address, self-signed certificate, pairing token, adb (phone over USB)
 app/modes/         detection modes page
   feeds.py         clips that only play while watched
   api.py           /api/modes endpoints and the /ws/modes/{id} stream
