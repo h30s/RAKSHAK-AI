@@ -107,3 +107,37 @@ MOVE_CONFIRM_S = 1.5          # a move to another camera is recorded once the ol
 PERSON_ACTIVE_S = 6           # "Active" while seen within this many seconds
 PERSON_RETENTION_S = 3600     # drop people not seen for an hour
 MAX_JOURNEY_STEPS = 200
+
+# --- Detection modes ----------------------------------------------------------------------
+# A separate page (/modes) runs the same detection pipeline on footage recorded in different
+# visibility and weather conditions. These clips are not dashboard cameras: each one only
+# plays, and is only analysed, while someone is watching it on that page.
+# Clips: (clip id, clip name, video file in VIDEO_DIR); sources are in scripts/fetch_assets.py.
+DETECTION_MODES = [
+    {"id": "normal", "name": "Normal", "tagline": "Clear daylight",
+     "about": "Standard daytime footage: good light and contrast. The baseline the other modes are compared with.",
+     "challenges": ["Dense crowds", "People partly hidden behind others", "Mixed people and traffic"],
+     "clips": [("mode-day-crossing", "City crossing", "mode_day_crossing.mp4"),
+               ("mode-day-street", "Street corner", "mode_day_street.mp4")]},
+    {"id": "night", "name": "Night", "tagline": "Low light",
+     "about": "Night-time footage lit only by street lamps and shop signs: dark areas, sensor noise and glare.",
+     "challenges": ["Very low light", "Glare from lamps and signs", "Dark clothing against dark backgrounds"],
+     "clips": [("mode-night-market", "Night market", "mode_night_market.mp4"),
+               ("mode-night-street", "Dark street", "mode_night_street.mp4")]},
+    {"id": "thermal", "name": "Thermal", "tagline": "Infrared sensor",
+     "about": "Footage from real thermal surveillance cameras: people show up by body heat, with no colour "
+              "and little texture.",
+     "challenges": ["No colour information", "Low resolution", "Small, distant people"],
+     "clips": [("mode-thermal-1", "Transit shelter", "mode_thermal_1.mp4"),
+               ("mode-thermal-2", "Shelter, east side", "mode_thermal_2.mp4")]},
+    {"id": "fog", "name": "Fog", "tagline": "Low visibility",
+     "about": "Fog and mist wash out contrast, so people fade into the background as they move away.",
+     "challenges": ["Washed-out contrast", "Silhouettes without detail", "Backlight from lamps"],
+     "clips": [("mode-fog-square", "Foggy square at night", "mode_fog_square.mp4"),
+               ("mode-fog-park", "Misty park", "mode_fog_park.mp4")]},
+    {"id": "weather", "name": "Rain & Snow", "tagline": "Bad weather",
+     "about": "Falling rain and snow add noise across the image; wet ground adds reflections of people and lights.",
+     "challenges": ["Rain and snowflakes", "Reflections on wet ground", "Umbrellas and hoods"],
+     "clips": [("mode-rain-street", "Rainy night street", "mode_rain_street.mp4"),
+               ("mode-snow-street", "Snowfall", "mode_snow_street.mp4")]},
+]

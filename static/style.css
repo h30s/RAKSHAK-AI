@@ -27,6 +27,16 @@ body { background: var(--bg); color: var(--text); display: flex; flex-direction:
 .conn.ok { color: var(--accent); }
 .conn.bad { color: var(--threat); }
 .clock { font-variant-numeric: tabular-nums; }
+.modes-link {
+  color: var(--text); text-decoration: none; font-size: 13px; font-weight: 500; white-space: nowrap;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2);
+}
+.modes-link:hover, .modes-link:focus-visible { border-color: var(--accent); }
+@media (max-width: 900px) { .modes-link-verb { display: none; } }
+@media (max-width: 640px) {  /* header on two rows: status and the modes link go below */
+  .topbar { flex-wrap: wrap; row-gap: 10px; }
+  .status { width: 100%; justify-content: space-between; }
+}
 
 main { flex: 1; min-height: 0; padding: 16px 20px 20px; }
 

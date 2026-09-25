@@ -15,6 +15,7 @@ Video files ──► Camera threads ──► Detection thread (YOLOv8n COCO + 
                                ▼
       Browser: Cameras tab (grid ─► large view + detected objects)
                People tab  (list/search ─► live location + journey)
+               /modes      (detection modes: night, thermal, fog, rain & snow)
 ```
 
 ## Run
@@ -26,7 +27,7 @@ python -m venv .venv
 .venv\Scripts\activate            # Linux/macOS: source .venv/bin/activate
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
-python scripts/fetch_assets.py    # downloads the 13 demo clips and 3 models (~1.3 GB download, ~110 MB kept)
+python scripts/fetch_assets.py    # downloads the 23 demo clips and 3 models (~1.4 GB download, ~150 MB kept)
 uvicorn app.server:app --port 8000
 ```
 
@@ -54,6 +55,43 @@ Open http://localhost:8000.
     with the person highlighted in blue and everyone else dimmed;
   - **Journey**: every location in order, with camera, arrival time, time spent there and the
     time between locations.
+- **Detection modes** (`/modes`, "View Detection Modes" in the header): a separate page showing
+  the same detection pipeline on footage recorded in different conditions. See below.
+
+## Detection modes
+
+The `/modes` page has one card per condition. Selecting a card shows that condition's footage
+with live detection boxes, next to a short description of what makes it hard, live counts
+(people, vehicles, weapons, average confidence) and the detected-objects list.
+
+| Mode | Footage | What makes it hard |
+|---|---|---|
+| Normal | city crossing from above, street corner (daylight) | crowds, occlusion |
+| Night | night market, dark street | low light, glare, noise |
+| Thermal | two views of a transit shelter from a **real thermal surveillance camera** (MEVA) | no colour, low resolution, small people |
+| Fog | foggy square at night, misty park | washed-out contrast, silhouettes |
+| Rain & Snow | rainy night street, snowfall | rain and snow noise, reflections |
+
+Each mode has two clips (switch with the buttons above the video). None of them is used
+anywhere else in the app. They run through the same `DetectionLoop`, weapon filter and object
+log as the dashboard cameras, with nothing tuned per mode, so what you see is how the system
+really copes with each condition.
+
+The clips are not dashboard cameras: they are not in `/ws`, `/api/cameras` or journey tracking.
+A clip only plays, and is only analysed, while someone watches it
+(`app/modes/feeds.py`). Watching one adds one feed to the detection batch (~7% more detection
+work); with the page closed or in a background tab it costs nothing. Each time a clip is opened
+it restarts from the beginning, and the page shows "Starting live analysis…" for the few seconds
+the display delay needs.
+
+Measured on the clips (a detection pass every 2 s): ~7 people per pass by day, ~6 in the night
+market, ~3 in the thermal views, 1–3 in fog, 2–6 in rain and snow. Replaying all clips through
+the weapon filter at three timings gave no weapon alerts. The weapon model does fire on some of
+them (e.g. "explosion" on snow spray behind cars), but not twice in the same place, so the
+filter rejects it.
+
+API: `GET /api/modes` (modes and clips), `GET /api/modes/clips/{id}/objects`,
+`GET /api/modes/clips/{id}/poster.jpg`, WebSocket `/ws/modes/{id}` (same binary frames as `/ws`).
 
 ## Detection
 
@@ -143,6 +181,11 @@ play in lockstep (`app/tracking/feeds.py`), so a person leaving one view appears
 the right moment. The slot was chosen with MEVA's activity annotations ("person enters/exits
 scene"): it has the most traffic between these cameras.
 
+The **Detection modes** footage is 8 Pexels clips (night, fog, rain, snow and two daylight
+clips) plus two recordings of MEVA's thermal infrared camera G476 (7 March 2018, a transit
+shelter). The thermal camera is only 352×240, so its clips are cropped to where people walk,
+which makes them large enough to detect.
+
 To use your own footage, put `.mp4` files in `videos/` and edit `CAMERAS` in `app/config.py`.
 Replacing the file reader with an RTSP URL (`cv2.VideoCapture("rtsp://…")`) turns a feed into a
 real camera stream.
@@ -160,6 +203,9 @@ app/tracking/      person journey tracking
   osnet.py         OSNet network definition (from torchreid, MIT)
   feeds.py         lockstep playback for cameras of one site
   api.py           /api/persons endpoints
-static/            dashboard (plain HTML/CSS/JS, canvas rendering)
+app/modes/         detection modes page
+  feeds.py         clips that only play while watched
+  api.py           /api/modes endpoints and the /ws/modes/{id} stream
+static/            dashboard and modes page (plain HTML/CSS/JS, canvas rendering)
 scripts/fetch_assets.py   downloads footage and model weights
 ```

@@ -8,6 +8,9 @@ Journey-tracking footage: five cameras of the MEVA dataset (https://mevadata.org
 inside and around one school building, recorded at the same moment. The same 3-minute window is
 cut from each so the feeds can be played in lockstep.
 
+Detection-modes footage (the /modes page): Pexels clips recorded at night, in fog, rain and
+snow, plus two real thermal surveillance cameras of the MEVA dataset (CC BY 4.0).
+
 Weapon model: Subh775/Threat-Detection-YOLOv8n on Hugging Face (MIT).
 Person re-identification model: OSNet-x0.25 trained on MSMT17, kaiyangzhou/osnet on Hugging Face
 (MIT; the MSMT17 training data is for non-commercial research use), converted to ONNX.
@@ -49,6 +52,30 @@ SITE_FOOTAGE = {
     "school_hallway.mp4": ("2018-03-09.10-10-00.10-15-00.school.G423.r13.avi", 120, (0.2, 0.08, 0.8, 0.685)),
 }
 SITE_SECONDS = 180
+
+# Detection-modes footage: output file -> (source URL, start second, seconds, crop box or None).
+# Pexels clips are taken at 960x540 (their CDN renditions); links are on https://www.pexels.com/video/<id>/.
+PEXELS_CDN = "https://videos.pexels.com/video-files/"
+MEVA_ROOT = "https://mevadata-public-01.s3.amazonaws.com/drops-123-r13/"
+MODE_FOOTAGE = {
+    # Normal: pexels 27700659 (crossing, high angle), 14365420 (Toronto street corner)
+    "mode_day_crossing.mp4": (PEXELS_CDN + "27700659/12208357_960_540_60fps.mp4", 0, 30, None),
+    "mode_day_street.mp4": (PEXELS_CDN + "14365420/14365420-sd_960_540_30fps.mp4", 0, 30, None),
+    # Night: pexels 4122942 (night market; starts out of focus), 11839819 (dark street)
+    "mode_night_market.mp4": (PEXELS_CDN + "4122942/4122942-sd_960_540_24fps.mp4", 6, 30, None),
+    "mode_night_street.mp4": (PEXELS_CDN + "11839819/11839819-sd_960_540_25fps.mp4", 0, 30, None),
+    # Thermal: MEVA camera G476 (thermal IR, 352x240), cropped to where people walk
+    "mode_thermal_1.mp4": (MEVA_ROOT + "2018-03-07/11/2018-03-07.11-05-00.11-10-00.hospital.G476.r13.avi",
+                           0, 60, (0.0, 0.22, 0.72, 0.81)),
+    "mode_thermal_2.mp4": (MEVA_ROOT + "2018-03-07/11/2018-03-07.11-10-00.11-15-00.hospital.G476.r13.avi",
+                           130, 60, (0.28, 0.22, 1.0, 0.81)),
+    # Fog: pexels 11786068 (foggy square at night), 29725266 (misty park)
+    "mode_fog_square.mp4": (PEXELS_CDN + "11786068/11786068-sd_960_540_25fps.mp4", 0, 30, None),
+    "mode_fog_park.mp4": (PEXELS_CDN + "29725266/12779330_960_540_50fps.mp4", 0, 30, None),
+    # Rain & snow: pexels 5743580 (rainy night, London), 30379876 (snowfall, Toronto)
+    "mode_rain_street.mp4": (PEXELS_CDN + "5743580/5743580-sd_960_540_30fps.mp4", 0, 30, None),
+    "mode_snow_street.mp4": (PEXELS_CDN + "30379876/13019692_960_540_60fps.mp4", 0, 30, None),
+}
 
 REID_REPO = "kaiyangzhou/osnet"
 REID_FILE = ("osnet_x0_25_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_"
@@ -122,6 +149,18 @@ def main():
             print(f"↓ {name}  ← MEVA {recording}")
             download(MEVA_URL + recording, raw)
             frames = transcode(raw, dest, start, SITE_SECONDS, crop)
+            raw.unlink()
+            print(f"  {frames} frames @ {config.FEED_FPS:g} fps")
+
+        for name, (url, start, seconds, crop) in MODE_FOOTAGE.items():
+            dest = config.VIDEO_DIR / name
+            if dest.exists() and not force:
+                print(f"✓ {name} (exists)")
+                continue
+            raw = Path(tmp) / url.rsplit("/", 1)[1]
+            print(f"↓ {name}  ← {url}")
+            download(url, raw)
+            frames = transcode(raw, dest, start, seconds, crop)
             raw.unlink()
             print(f"  {frames} frames @ {config.FEED_FPS:g} fps")
 

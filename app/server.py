@@ -10,6 +10,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
+from .modes import api as modes_api
+from .modes.feeds import ModeCamera
 from .pipeline import Camera, DetectionLoop
 from .tracking import api as tracking_api
 from .tracking.feeds import SyncedCamera
@@ -23,7 +25,8 @@ cameras: list[Camera] = []
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    missing = [f for _, _, f in config.CAMERAS if not (config.VIDEO_DIR / f).exists()]
+    mode_clips = [clip for m in config.DETECTION_MODES for clip in m["clips"]]
+    missing = [f for _, _, f in config.CAMERAS + mode_clips if not (config.VIDEO_DIR / f).exists()]
     if missing:
         raise RuntimeError(f"Missing videos {missing} in {config.VIDEO_DIR} — run scripts/fetch_assets.py first")
     site_of = {cam: site for site, cams in config.TRACKING_SITES.items() for cam in cams}
@@ -38,8 +41,19 @@ async def lifespan(app: FastAPI):
             cameras.append(Camera(i, cam_id, name, config.VIDEO_DIR / file))
     tracker = JourneyTracker({c.id: c.name for c in cameras})
     tracking_api.tracker = tracker
-    loop = DetectionLoop(cameras, on_results=tracker.update)  # loads the models before any feed starts
-    for cam in cameras:
+    # Detection-modes clips: same detection loop, but they only play while watched on /modes
+    # and are not dashboard cameras (not in /ws, /api/cameras or journey tracking).
+    for i, (clip_id, name, file) in enumerate(mode_clips, start=len(cameras)):
+        modes_api.clips[clip_id] = ModeCamera(i, clip_id, name, config.VIDEO_DIR / file)
+
+    def track(t, group):
+        group = [item for item in group if item[0] not in modes_api.clips]
+        if group:
+            tracker.update(t, group)
+
+    feeds = cameras + list(modes_api.clips.values())
+    loop = DetectionLoop(feeds, on_results=track)  # loads the models before any feed starts
+    for cam in feeds:
         cam.start()
     loop.start()
     log.info("Started %d cameras", len(cameras))
@@ -62,15 +76,21 @@ async def revalidate_static(request, call_next):
     """Make browsers re-check the page, scripts and styles on every load (cheap 304s), so an
     updated dashboard is picked up without a hard refresh."""
     response = await call_next(request)
-    if request.url.path == "/" or request.url.path.startswith("/static/"):
+    if request.url.path in ("/", "/modes") or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
 app.include_router(tracking_api.router)
+app.include_router(modes_api.router)
 
 
 @app.get("/")
 def index():
     return FileResponse(config.STATIC_DIR / "index.html")
+
+
+@app.get("/modes")
+def modes_page():
+    return FileResponse(config.STATIC_DIR / "modes.html")
 
 
 @app.get("/api/cameras")
