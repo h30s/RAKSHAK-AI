@@ -1,4 +1,4 @@
-# Rakshak AI — Intelligent CCTV Surveillance System
+# Rakshak AI  Intelligent CCTV Surveillance System
 
 Rakshak AI is a software layer that transforms existing CCTV cameras into an intelligent surveillance system. It provides real-time object detection, weapon detection, and person journey tracking across multiple camera feeds.
 
