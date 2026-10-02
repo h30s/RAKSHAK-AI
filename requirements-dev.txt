@@ -1,0 +1,9 @@
+# What the tests and the benchmark need; no models, no torch (used by CI).
+numpy>=1.26
+opencv-python-headless>=4.9
+fastapi>=0.110
+uvicorn>=0.29
+cryptography>=42
+pytest>=8
+httpx2>=2      # FastAPI's TestClient (Starlette 1.x); older Starlette uses httpx
+httpx>=0.27
